@@ -1,0 +1,84 @@
+# Untitled notebook
+
+## Section
+
+```elixir
+Mix.install([
+  {:vega_lite, "~> 0.1.4"},
+  {:kino_vega_lite, "~> 0.1.1"},
+  {:csv, "~> 3.0"}
+])
+```
+
+```elixir
+alias VegaLite, as: Vl
+```
+
+```elixir
+data =
+  File.stream!("... /Mall_Customers.csv")
+  |> CSV.decode!(headers: true)
+  |> Enum.into([])
+
+data |> Enum.take(1)
+```
+
+```elixir
+Vl.new(width: 400, height: 300)
+|> Vl.data_from_values(data)
+|> Vl.mark(:point)
+|> Vl.encode_field(:x, "Annual_Income_(k$)", type: :quantitative)
+|> Vl.encode_field(:y, "Spending_Score", type: :quantitative)
+```
+
+```elixir
+defmodule U do
+  def dist(a, b, cols) do
+    Enum.map(cols, fn col -> (a[col] - b[col]) ** 2 end)
+    |> Enum.sum()
+    |> :math.sqrt()
+  end
+end
+```
+
+```elixir
+datap =
+  Enum.map(data |> Enum.shuffle(), fn row ->
+    %{
+      "Annual_Income_(k$)" => String.to_integer(row["Annual_Income_(k$)"]),
+      "Spending_Score" => String.to_integer(row["Spending_Score"]),
+      "type" => Unclassified,
+      "cluster" => nil
+    }
+  end)
+
+[hd(datap), hd(tl(datap))]
+```
+
+```elixir
+attrs = ["Annual_Income_(k$)", "Spending_Score"]
+
+point = hd(datap)
+others = tl(datap)
+
+seeds = Enum.filter(others, fn p -> U.dist(point, p, attrs) < 10 end)
+
+Vl.new(width: 400, height: 300)
+|> Vl.data_from_values(seeds)
+|> Vl.mark(:point)
+|> Vl.encode_field(:x, "Annual_Income_(k$)", type: :quantitative)
+|> Vl.encode_field(:y, "Spending_Score", type: :quantitative)
+```
+
+```elixir
+augmented =
+  Enum.map(data, fn row ->
+    %{
+      "Annual_Income_(k$)" => String.to_integer(row["Annual_Income_(k$)"]),
+      "Spending_Score" => String.to_integer(row["Spending_Score"]),
+      "cluster" => 0
+    }
+  end)
+
+[hd(augmented), hd(tl(augmented))]
+```
